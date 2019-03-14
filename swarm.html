@@ -1,0 +1,104 @@
+<html>
+  <head>
+    <title>Emergent Behavior</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  </head>
+  <body style='background: #000'>
+    <canvas id='display' width='1' height='1' />
+
+    <script>
+
+    const OBJECTS = 500
+    const DAMPING = 0.999
+    const BIAS = 0.1
+    const FORCE = 1 / 1000
+    const DIST = 500
+
+    class Particle {
+        constructor(x, y, col) {
+            this.x = this.oldX = x
+            this.y = this.oldY = y    
+            this.col = col
+        }
+        integrate() {
+            const velocityX = (this.x - this.oldX) * DAMPING
+            const velocityY = (this.y - this.oldY) * DAMPING
+            this.oldX = this.x
+            this.oldY = this.y
+            this.x += velocityX
+            this.y += velocityY    
+        }
+        interact(other) {
+            const dx = other.x - this.x
+            const dy = other.y - this.y
+            const dist = Math.sqrt(dx * dx + dy * dy)
+            if (dist > DIST) {  // too far; attract
+                if (other.col != this.col) return
+                const d = Math.max(1, dist - DIST)
+                this.x += dx / d * FORCE
+                this.y += dy / d * FORCE
+            } else {    // to close; repel
+                const d = Math.max(1, dist)
+                this.x -= dx / d * FORCE
+                this.y -= dy / d * FORCE
+            }
+        }
+        contain(width, height) {
+            if (this.x < 0) this.x = 0 - this.x
+            if (this.x > width) this.x = width - (this.x - width)
+            if (this.y < 0) this.y = 0 - this.y
+            if (this.y > height) this.y = height - (this.y - height)
+        }
+        draw(ctx) {
+            ctx.strokeStyle = this.col
+            ctx.lineWidth = 4
+            ctx.beginPath()
+            ctx.moveTo(this.oldX + BIAS, this.oldY + BIAS)
+            ctx.lineTo(this.x, this.y)
+            ctx.stroke()
+        }
+    }
+
+    main()
+
+    function main() {
+        const display = document.getElementById('display')
+        const ctx = display.getContext('2d')
+        const particles = []
+        const width = display.width = window.innerWidth
+        const height = display.height = window.innerHeight
+        const colors = ['#ff0', '#0ff', '#f0f']
+
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+
+        for (let i = 0; i < OBJECTS; i++) {
+            const c = colors[Math.floor(Math.random() * colors.length)];
+            particles[i] = new Particle(Math.random() * width, Math.random() * height, c)
+        }
+
+        requestAnimationFrame(frame)
+
+        function frame() {
+            requestAnimationFrame(frame)
+            
+            ctx.save()
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
+            ctx.fillRect(0, 0, width, height)
+            ctx.restore()
+
+            for (const p of particles) {
+                for (const other of particles) {
+                    if (p === other) continue
+                    p.interact(other)
+                }
+                p.integrate()
+                p.contain(width, height)
+                p.draw(ctx)
+            }
+        }
+    }
+
+    </script>
+  </body>
+</html>
